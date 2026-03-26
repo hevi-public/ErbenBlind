@@ -1,0 +1,126 @@
+{
+  "_note": "Pool of semantic domains for forced-choice trials. The option_selector.py picks 3-4 from this pool per trial step, controlling whether the target domain is included (target-present vs target-absent trials). Domains are intentionally broad — the LLM's task is to pick the MOST consistent one, not to guess the exact word.",
+
+  "domains": [
+    {
+      "id": "SD-01",
+      "label": "WATER_LIQUID",
+      "description_for_evaluation": "Water, liquids, flowing, wet, rain, river, drinking"
+    },
+    {
+      "id": "SD-02",
+      "label": "EARTH_GROUND",
+      "description_for_evaluation": "Earth, soil, ground, underground, digging, burial"
+    },
+    {
+      "id": "SD-03",
+      "label": "FIRE_HEAT",
+      "description_for_evaluation": "Fire, heat, burning, warmth, cooking, sun"
+    },
+    {
+      "id": "SD-04",
+      "label": "AIR_WIND",
+      "description_for_evaluation": "Air, wind, breath, blowing, sky, atmosphere"
+    },
+    {
+      "id": "SD-05",
+      "label": "GROWTH_PLANT",
+      "description_for_evaluation": "Plants, growth, sprouting, roots, trees, harvest"
+    },
+    {
+      "id": "SD-06",
+      "label": "ANIMAL_CREATURE",
+      "description_for_evaluation": "Animals, creatures, hunting, wildlife"
+    },
+    {
+      "id": "SD-07",
+      "label": "BODY_FLESH",
+      "description_for_evaluation": "Body, flesh, physical form, organs, bodily functions"
+    },
+    {
+      "id": "SD-08",
+      "label": "MOVEMENT_TRAVEL",
+      "description_for_evaluation": "Movement, walking, running, travel, path, direction"
+    },
+    {
+      "id": "SD-09",
+      "label": "VISION_LIGHT",
+      "description_for_evaluation": "Seeing, light, brightness, color, appearance"
+    },
+    {
+      "id": "SD-10",
+      "label": "SOUND_HEARING",
+      "description_for_evaluation": "Sound, hearing, noise, music, speech, calling"
+    },
+    {
+      "id": "SD-11",
+      "label": "TOUCH_TEXTURE",
+      "description_for_evaluation": "Touch, texture, rough, smooth, hard, soft surfaces"
+    },
+    {
+      "id": "SD-12",
+      "label": "SIZE_QUANTITY",
+      "description_for_evaluation": "Size, amount, big, small, many, few, measuring"
+    },
+    {
+      "id": "SD-13",
+      "label": "CUTTING_SHARP",
+      "description_for_evaluation": "Cutting, sharp, piercing, splitting, tearing"
+    },
+    {
+      "id": "SD-14",
+      "label": "CONTAINMENT_ENCLOSURE",
+      "description_for_evaluation": "Containing, enclosing, wrapping, covering, hiding"
+    },
+    {
+      "id": "SD-15",
+      "label": "DECAY_DETERIORATION",
+      "description_for_evaluation": "Decay, rot, deterioration, ugly, foul, broken"
+    },
+    {
+      "id": "SD-16",
+      "label": "KINSHIP_SOCIAL",
+      "description_for_evaluation": "Family, kinship, social bonds, mother, father, child"
+    },
+    {
+      "id": "SD-17",
+      "label": "FOOD_EATING",
+      "description_for_evaluation": "Food, eating, taste, swallowing, hunger, cooking"
+    },
+    {
+      "id": "SD-18",
+      "label": "BUILDING_STRUCTURE",
+      "description_for_evaluation": "Building, construction, structure, dwelling, shelter"
+    },
+    {
+      "id": "SD-19",
+      "label": "EMOTION_INNER",
+      "description_for_evaluation": "Emotion, feeling, inner state, desire, fear, joy"
+    },
+    {
+      "id": "SD-20",
+      "label": "ROTATION_TWISTING",
+      "description_for_evaluation": "Turning, twisting, spinning, circular motion, winding"
+    },
+    {
+      "id": "SD-21",
+      "label": "BINDING_CONNECTING",
+      "description_for_evaluation": "Tying, binding, connecting, joining, attaching"
+    },
+    {
+      "id": "SD-22",
+      "label": "EXPELLING_EJECTING",
+      "description_for_evaluation": "Pushing out, ejecting, spitting, blowing away, removing"
+    },
+    {
+      "id": "SD-23",
+      "label": "SWELLING_EXPANDING",
+      "description_for_evaluation": "Swelling, growing larger, inflating, filling, expanding"
+    },
+    {
+      "id": "SD-24",
+      "label": "STEALING_STEALTH",
+      "description_for_evaluation": "Sneaking, stealing, hiding, secret movement, quiet action"
+    }
+  ]
+}

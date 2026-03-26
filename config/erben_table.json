@@ -1,0 +1,169 @@
+{
+  "_source": "Erben Johansson et al. (2020), Table 5: 'The typology of sound symbolism: Defining macro-concepts via their semantic and phonetic features'",
+  "_note": "Each macro-concept lists its associated sound_groups (from the paper's feature notation), the primary cardinal sounds that drive the association, the mapping type (O=onomatopoeia, V=vocal gesture, R=relative, C=circumstantial), and the contained semantic concepts.",
+
+  "macro_concepts": {
+    "AIRFLOW": {
+      "id": "MC-01",
+      "sound_groups": ["voiceless", "labial", "rounded_vowel", "back_vowel"],
+      "primary_cardinal_sounds": ["p", "u"],
+      "mapping_type": "O",
+      "strength": "strong",
+      "contained_concepts": ["ASHES", "BLOW", "CLOUD", "DUST", "SMOKE"],
+      "possible_concepts": ["GRAY"]
+    },
+    "PHARYNGEAL": {
+      "id": "MC-02",
+      "sound_groups": ["voiceless", "rounded_vowel", "back_vowel"],
+      "primary_cardinal_sounds": ["k", "o"],
+      "mapping_type": "O",
+      "strength": "strong",
+      "contained_concepts": ["COUGH", "LUNG", "SNORE", "THROAT"]
+    },
+    "EXPULSION": {
+      "id": "MC-03",
+      "sound_groups": ["voiceless", "unrounded_vowel", "front_vowel", "high_front_rounded_vowel"],
+      "primary_cardinal_sounds": ["t", "s", "i"],
+      "mapping_type": "O",
+      "strength": "strong",
+      "contained_concepts": ["FART", "SNEEZE", "SPIT"]
+    },
+    "GAPING": {
+      "id": "MC-04",
+      "sound_groups": ["low_vowel", "low_front_vowel", "low_front_unrounded_vowel"],
+      "primary_cardinal_sounds": ["a"],
+      "mapping_type": "O/V",
+      "strength": "strong",
+      "contained_concepts": ["TASTE", "YAWN"]
+    },
+    "UNEVEN": {
+      "id": "MC-05",
+      "sound_groups": ["voiceless", "alveolar_voiced"],
+      "primary_cardinal_sounds": ["k", "t", "r"],
+      "mapping_type": "O/V",
+      "strength": "strong",
+      "contained_concepts": ["BARK", "SKIN", "SNORE"]
+    },
+    "ROUNDNESS": {
+      "id": "MC-06",
+      "sound_groups": ["rounded_vowel", "back_vowel"],
+      "primary_cardinal_sounds": ["o", "u"],
+      "mapping_type": "V",
+      "strength": "strong",
+      "contained_concepts": ["BLUNT", "BUTTOCKS", "KNEE", "NAVEL", "NECK", "NIPPLE", "ROUND"]
+    },
+    "FLAT": {
+      "id": "MC-07",
+      "sound_groups": ["unrounded_vowel", "front_vowel", "low_vowel", "low_front_vowel", "low_front_unrounded_vowel"],
+      "primary_cardinal_sounds": ["a"],
+      "mapping_type": "V",
+      "strength": "strong",
+      "contained_concepts": ["FLAT"]
+    },
+    "TONGUE": {
+      "id": "MC-08",
+      "sound_groups": ["voiced", "alveolar_voiced"],
+      "primary_cardinal_sounds": ["l"],
+      "mapping_type": "V",
+      "strength": "strong",
+      "contained_concepts": ["TONGUE"]
+    },
+    "NOSE": {
+      "id": "MC-09",
+      "sound_groups": ["nasal_voiced"],
+      "primary_cardinal_sounds": ["n"],
+      "mapping_type": "V",
+      "strength": "weak",
+      "contained_concepts": ["NOSE"]
+    },
+    "TURN": {
+      "id": "MC-10",
+      "sound_groups": ["alveolar_voiced"],
+      "primary_cardinal_sounds": ["r"],
+      "mapping_type": "V",
+      "strength": "weak",
+      "contained_concepts": ["TURN"]
+    },
+    "SMALLNESS": {
+      "id": "MC-11",
+      "sound_groups": ["voiceless", "stop", "voiceless_stop"],
+      "primary_cardinal_sounds": ["t", "k"],
+      "mapping_type": "R",
+      "strength": "strong",
+      "contained_concepts": ["SHORT", "SMALL"]
+    },
+    "DEEP": {
+      "id": "MC-12",
+      "sound_groups": ["rounded_vowel"],
+      "primary_cardinal_sounds": ["u"],
+      "mapping_type": "R",
+      "strength": "weak",
+      "contained_concepts": ["DEEP"]
+    },
+    "HARDNESS": {
+      "id": "MC-13",
+      "sound_groups": ["voiceless", "stop"],
+      "primary_cardinal_sounds": ["k"],
+      "mapping_type": "R",
+      "strength": "strong",
+      "contained_concepts": ["HARD", "BONE"]
+    },
+    "SOFTNESS": {
+      "id": "MC-14",
+      "sound_groups": ["rounded_vowel"],
+      "primary_cardinal_sounds": ["o", "u"],
+      "mapping_type": "R",
+      "strength": "strong",
+      "contained_concepts": ["BRAIN", "BUTTOCKS", "ROTTEN"]
+    },
+    "QUESTION": {
+      "id": "MC-15",
+      "sound_groups": ["unrounded_vowel"],
+      "primary_cardinal_sounds": ["a"],
+      "mapping_type": "R",
+      "strength": "strong",
+      "contained_concepts": ["WHAT", "WHERE", "WHO"],
+      "possible_concepts": ["SAY"]
+    },
+    "MOTHER": {
+      "id": "MC-16",
+      "sound_groups": ["voiced", "nasal", "nasal_voiced", "unrounded_vowel", "front_vowel", "low_front_vowel", "low_front_unrounded_vowel"],
+      "primary_cardinal_sounds": ["n", "a"],
+      "mapping_type": "C",
+      "strength": "strong",
+      "contained_concepts": ["M_FS", "M_MS"]
+    },
+    "FATHER": {
+      "id": "MC-17",
+      "sound_groups": ["labial", "stop", "unrounded_vowel", "front_vowel", "low_vowel", "low_front_vowel", "low_front_unrounded_vowel"],
+      "primary_cardinal_sounds": ["b", "t", "a"],
+      "mapping_type": "C",
+      "strength": "strong",
+      "contained_concepts": ["F_FS", "F_MS"]
+    },
+    "RELATIVE": {
+      "id": "MC-18",
+      "sound_groups": ["low_front_unrounded_vowel"],
+      "primary_cardinal_sounds": ["a"],
+      "mapping_type": "C",
+      "strength": "weak",
+      "contained_concepts": ["MF_FS", "MF_MS"]
+    },
+    "INFANCY": {
+      "id": "MC-19",
+      "sound_groups": ["voiced", "nasal", "nasal_voiced", "rounded_vowel", "back_vowel"],
+      "primary_cardinal_sounds": ["m", "n", "u"],
+      "mapping_type": "C/V",
+      "strength": "strong",
+      "contained_concepts": ["BREAST", "M_FS", "M_MS", "MILK", "NIPPLE", "SUCK"]
+    },
+    "DEIXIS": {
+      "id": "MC-20",
+      "sound_groups": ["voiced", "nasal", "nasal_voiced", "unrounded_vowel"],
+      "primary_cardinal_sounds": ["m", "n", "a", "i"],
+      "mapping_type": "C/R",
+      "strength": "strong",
+      "contained_concepts": ["1SG", "2SG", "3SG", "1PLI", "1PLE", "2PL", "THIS"]
+    }
+  }
+}

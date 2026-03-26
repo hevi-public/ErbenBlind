@@ -1,0 +1,49 @@
+{
+  "_note": "Bidirectional mapping between coded labels (used in blinded prompts) and human-readable macro-concept names (used in synthesis/evaluation). The MC-XX codes are arbitrary and carry no semantic information.",
+
+  "code_to_label": {
+    "MC-01": "AIRFLOW",
+    "MC-02": "PHARYNGEAL",
+    "MC-03": "EXPULSION",
+    "MC-04": "GAPING",
+    "MC-05": "UNEVEN",
+    "MC-06": "ROUNDNESS",
+    "MC-07": "FLAT",
+    "MC-08": "TONGUE",
+    "MC-09": "NOSE",
+    "MC-10": "TURN",
+    "MC-11": "SMALLNESS",
+    "MC-12": "DEEP",
+    "MC-13": "HARDNESS",
+    "MC-14": "SOFTNESS",
+    "MC-15": "QUESTION",
+    "MC-16": "MOTHER",
+    "MC-17": "FATHER",
+    "MC-18": "RELATIVE",
+    "MC-19": "INFANCY",
+    "MC-20": "DEIXIS"
+  },
+
+  "label_to_code": {
+    "AIRFLOW": "MC-01",
+    "PHARYNGEAL": "MC-02",
+    "EXPULSION": "MC-03",
+    "GAPING": "MC-04",
+    "UNEVEN": "MC-05",
+    "ROUNDNESS": "MC-06",
+    "FLAT": "MC-07",
+    "TONGUE": "MC-08",
+    "NOSE": "MC-09",
+    "TURN": "MC-10",
+    "SMALLNESS": "MC-11",
+    "DEEP": "MC-12",
+    "HARDNESS": "MC-13",
+    "SOFTNESS": "MC-14",
+    "QUESTION": "MC-15",
+    "MOTHER": "MC-16",
+    "FATHER": "MC-17",
+    "RELATIVE": "MC-18",
+    "INFANCY": "MC-19",
+    "DEIXIS": "MC-20"
+  }
+}

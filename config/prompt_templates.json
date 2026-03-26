@@ -1,0 +1,27 @@
+{
+  "_note": "Prompt templates for blinded Erben analysis. Variables in {curly_braces} are filled by prompt_formatter.py. The model NEVER receives the word, language, or phonemes — only abstract activation profiles using MC-XX codes.",
+
+  "system_prompt": "You are a semantic field analyst. You work with abstract activation profiles derived from a psycholinguistic framework that maps articulatory features to conceptual primitives. You do NOT know what language these profiles come from, what word they represent, or what phonemes produced them. Your job is to interpret what semantic field the activation profile most plausibly points to. Be specific in your predictions — vague answers like 'something natural' are not useful. Commit to your best interpretation even under uncertainty.",
+
+  "step_1_consonant_frame": {
+    "template": "An unknown word has been analyzed using an articulatory-semantic framework. The word's consonant skeleton (ignoring vowels) produced the following activation profile:\n\n{consonant_activations}\n\nEach code (MC-XX) represents a distinct conceptual primitive in the framework. You do not know what these codes mean — treat them as abstract features.\n\nBased on the pattern of activations across consonant positions, which of the following semantic domains is MOST consistent with this consonant frame?\n\n{forced_choice_options}\n\nPick exactly one. Explain your reasoning briefly (2-3 sentences). Then state your choice clearly.",
+    "variables": ["consonant_activations", "forced_choice_options"]
+  },
+
+  "step_2_vowel_fill": {
+    "template": "Continuing the analysis of the same unknown word.\n\nYour previous assessment of the consonant frame was:\n---\n{step_1_response}\n---\nYour choice was: {step_1_choice}\n\nNow the vowel analysis has been added. The vowels between the consonants produced these additional activations:\n\n{vowel_activations}\n\nCombined with the consonant frame, the full activation profile is now:\n\n{combined_activations}\n\nReinforcement (codes activated by BOTH consonants and vowels): {reinforced_codes}\n\nGiven your prior commitment to {step_1_choice}, and now incorporating the vowel data, which of the following semantic domains is MOST consistent with the FULL profile?\n\n{forced_choice_options}\n\nYour previous choice may or may not appear in this list. Pick the best match from the options presented. Explain whether the vowel data confirms, modifies, or contradicts your consonant-frame reading (2-3 sentences). Then state your choice clearly.",
+    "variables": ["step_1_response", "step_1_choice", "vowel_activations", "combined_activations", "reinforced_codes", "forced_choice_options"]
+  },
+
+  "step_3_synthesis": {
+    "template": "Final synthesis for the unknown word.\n\nYour sequential assessments were:\n- Consonant frame → {step_1_choice}\n- Full profile (with vowels) → {step_2_choice}\n\nYour reasoning at each step:\n---\nStep 1: {step_1_response}\n---\nStep 2: {step_2_response}\n---\n\nHere is the full decoded activation profile with human-readable labels replacing the codes:\n\n{decoded_full_profile}\n\nActivation summary:\n- Strongest activations (present at 2+ positions): {strong_activations}\n- Unique activations (present at only 1 position): {weak_activations}\n- Consonant-vowel reinforcement: {reinforcement_summary}\n\nBased on everything above, provide:\n1. A single specific semantic field prediction (e.g., 'liquid/flowing', 'cutting/sharp', 'underground/buried' — be as specific as possible)\n2. Your confidence level (low / moderate / high)\n3. A one-sentence description of what kind of thing or concept this word might refer to\n\nDo NOT hedge with multiple possibilities. Commit to your single best prediction.",
+    "variables": ["step_1_choice", "step_2_choice", "step_1_response", "step_2_response", "decoded_full_profile", "strong_activations", "weak_activations", "reinforcement_summary"]
+  },
+
+  "_design_notes": {
+    "blinding": "Steps 1-2 use MC-XX codes so the model cannot associate activations with named concepts. Step 3 decodes to human-readable labels for the synthesis — this is the only step where semantic interpretation is possible, and it's constrained by prior commitments.",
+    "sequential_commitment": "Each step quotes the model's prior response back to it, creating an anchor. The model can't silently revise earlier interpretations.",
+    "forced_choice": "Steps 1-2 present 3-4 options from the semantic domain pool. The target domain may or may not be present (controlled by trial_type). Step 3 is open-ended for maximum sensitivity.",
+    "contamination_defense": "The model never sees: the word, the language, the phonemes, or even the macro-concept names (until step 3). Its only input is abstract activation codes and their positional/reinforcement patterns."
+  }
+}

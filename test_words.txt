@@ -1,0 +1,4 @@
+word	target_domain	actual_meaning
+rút	SD-15	ugly, foul, repulsive
+víz	SD-01	water
+tűz	SD-03	fire

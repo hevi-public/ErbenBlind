@@ -1,0 +1,59 @@
+{
+  "_note": "Hungarian orthography → IPA mapping. Apply longest-match-first: check trigraphs before digraphs before single characters. 'ly' is mapped to /j/ (modern standard Hungarian pronunciation).",
+
+  "trigraphs": {
+    "dzs": "dʒ"
+  },
+
+  "digraphs": {
+    "sz": "s",
+    "zs": "ʒ",
+    "cs": "tʃ",
+    "ny": "ɲ",
+    "gy": "ɟ",
+    "ly": "j",
+    "ty": "c",
+    "dz": "dz"
+  },
+
+  "single_consonants": {
+    "p": "p",
+    "b": "b",
+    "t": "t",
+    "d": "d",
+    "k": "k",
+    "g": "ɡ",
+    "f": "f",
+    "v": "v",
+    "s": "ʃ",
+    "z": "z",
+    "h": "h",
+    "m": "m",
+    "n": "n",
+    "l": "l",
+    "r": "r",
+    "j": "j",
+    "c": "ts"
+  },
+
+  "vowels": {
+    "a": "ɒ",
+    "á": "aː",
+    "e": "ɛ",
+    "é": "eː",
+    "i": "i",
+    "í": "iː",
+    "o": "o",
+    "ó": "oː",
+    "ö": "ø",
+    "ő": "øː",
+    "u": "u",
+    "ú": "uː",
+    "ü": "y",
+    "ű": "yː"
+  },
+
+  "_gy_ty_note": "Hungarian 'gy' /ɟ/ (voiced palatal stop) and 'ty' /c/ (voiceless palatal stop) are not in the standard Erben phoneme set. For feature classification purposes: gy → voiced + palatal + stop; ty → voiceless + palatal + stop. These should be added to phoneme_features.json if not already present.",
+
+  "_gemination_note": "Doubled consonants in Hungarian spelling (e.g., 'tt', 'nn', 'ssz', 'ccs') represent gemination (long consonants). For Erben purposes, treat as single phoneme — the macro-concept activation is the same regardless of length."
+}

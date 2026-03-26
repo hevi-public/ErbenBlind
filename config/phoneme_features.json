@@ -1,0 +1,263 @@
+{
+  "_source": "Standard IPA phonetic feature classification, mapped to Erben Johansson et al. (2020) sound group notation",
+  "_hungarian_vowel_note": "Hungarian 'a' is /ɒ/ (low back ROUNDED), Hungarian 'á' is /aː/ (low central/front UNROUNDED). This distinction critically affects macro-concept activations.",
+
+  "consonants": {
+    "p": {
+      "ipa": "p",
+      "description": "voiceless bilabial stop",
+      "sound_groups": ["voiceless", "labial", "stop", "voiceless_stop", "labial_voiceless"],
+      "type": "consonant"
+    },
+    "b": {
+      "ipa": "b",
+      "description": "voiced bilabial stop",
+      "sound_groups": ["voiced", "labial", "stop", "voiced_stop", "labial_voiced"],
+      "type": "consonant"
+    },
+    "t": {
+      "ipa": "t",
+      "description": "voiceless alveolar stop",
+      "sound_groups": ["voiceless", "alveolar", "stop", "voiceless_stop", "alveolar_voiceless"],
+      "type": "consonant"
+    },
+    "d": {
+      "ipa": "d",
+      "description": "voiced alveolar stop",
+      "sound_groups": ["voiced", "alveolar", "stop", "voiced_stop", "alveolar_voiced"],
+      "type": "consonant"
+    },
+    "k": {
+      "ipa": "k",
+      "description": "voiceless velar stop",
+      "sound_groups": ["voiceless", "velar", "stop", "voiceless_stop", "velar_voiceless"],
+      "type": "consonant"
+    },
+    "ɡ": {
+      "ipa": "ɡ",
+      "description": "voiced velar stop",
+      "sound_groups": ["voiced", "velar", "stop", "voiced_stop", "velar_voiced"],
+      "type": "consonant"
+    },
+    "f": {
+      "ipa": "f",
+      "description": "voiceless labiodental fricative",
+      "sound_groups": ["voiceless", "labial", "fricative", "labial_voiceless"],
+      "type": "consonant"
+    },
+    "v": {
+      "ipa": "v",
+      "description": "voiced labiodental fricative",
+      "sound_groups": ["voiced", "labial", "fricative", "labial_voiced"],
+      "type": "consonant"
+    },
+    "s": {
+      "ipa": "s",
+      "description": "voiceless alveolar fricative",
+      "sound_groups": ["voiceless", "alveolar", "fricative", "sibilant", "alveolar_voiceless"],
+      "type": "consonant"
+    },
+    "z": {
+      "ipa": "z",
+      "description": "voiced alveolar fricative",
+      "sound_groups": ["voiced", "alveolar", "fricative", "sibilant", "alveolar_voiced"],
+      "type": "consonant"
+    },
+    "ʃ": {
+      "ipa": "ʃ",
+      "description": "voiceless postalveolar/palatal fricative",
+      "sound_groups": ["voiceless", "palatal", "fricative", "sibilant", "palatal_voiceless"],
+      "type": "consonant"
+    },
+    "ʒ": {
+      "ipa": "ʒ",
+      "description": "voiced postalveolar/palatal fricative",
+      "sound_groups": ["voiced", "palatal", "fricative", "sibilant", "palatal_voiced"],
+      "type": "consonant"
+    },
+    "h": {
+      "ipa": "h",
+      "description": "voiceless glottal fricative",
+      "sound_groups": ["voiceless", "glottal", "fricative"],
+      "type": "consonant"
+    },
+    "ts": {
+      "ipa": "ts",
+      "description": "voiceless alveolar affricate",
+      "sound_groups": ["voiceless", "alveolar", "affricate", "alveolar_voiceless"],
+      "type": "consonant"
+    },
+    "tʃ": {
+      "ipa": "tʃ",
+      "description": "voiceless postalveolar affricate",
+      "sound_groups": ["voiceless", "palatal", "affricate", "palatal_voiceless"],
+      "type": "consonant"
+    },
+    "dz": {
+      "ipa": "dz",
+      "description": "voiced alveolar affricate",
+      "sound_groups": ["voiced", "alveolar", "affricate", "alveolar_voiced"],
+      "type": "consonant"
+    },
+    "dʒ": {
+      "ipa": "dʒ",
+      "description": "voiced postalveolar affricate",
+      "sound_groups": ["voiced", "palatal", "affricate", "palatal_voiced"],
+      "type": "consonant"
+    },
+    "m": {
+      "ipa": "m",
+      "description": "voiced bilabial nasal",
+      "sound_groups": ["voiced", "labial", "nasal", "nasal_voiced", "labial_voiced"],
+      "type": "consonant"
+    },
+    "n": {
+      "ipa": "n",
+      "description": "voiced alveolar nasal",
+      "sound_groups": ["voiced", "alveolar", "nasal", "nasal_voiced", "alveolar_voiced"],
+      "type": "consonant"
+    },
+    "ɲ": {
+      "ipa": "ɲ",
+      "description": "voiced palatal nasal",
+      "sound_groups": ["voiced", "palatal", "nasal", "nasal_voiced", "palatal_voiced"],
+      "type": "consonant"
+    },
+    "l": {
+      "ipa": "l",
+      "description": "voiced alveolar lateral",
+      "sound_groups": ["voiced", "alveolar", "lateral", "alveolar_voiced"],
+      "type": "consonant"
+    },
+    "r": {
+      "ipa": "r",
+      "description": "voiced alveolar vibrant/trill",
+      "sound_groups": ["voiced", "alveolar", "vibrant", "alveolar_voiced"],
+      "type": "consonant"
+    },
+    "j": {
+      "ipa": "j",
+      "description": "voiced palatal approximant",
+      "sound_groups": ["voiced", "palatal", "approximant", "palatal_voiced"],
+      "type": "consonant"
+    },
+    "ɟ": {
+      "ipa": "ɟ",
+      "description": "voiced palatal stop",
+      "sound_groups": ["voiced", "palatal", "stop", "voiced_stop", "palatal_voiced"],
+      "type": "consonant"
+    },
+    "c": {
+      "ipa": "c",
+      "description": "voiceless palatal stop",
+      "sound_groups": ["voiceless", "palatal", "stop", "voiceless_stop", "palatal_voiceless"],
+      "type": "consonant"
+    }
+  },
+
+  "vowels": {
+    "ɒ": {
+      "ipa": "ɒ",
+      "hungarian_letter": "a",
+      "description": "low back rounded vowel (Hungarian short 'a')",
+      "sound_groups": ["rounded_vowel", "back_vowel", "low_vowel", "low_back_vowel", "low_back_rounded_vowel"],
+      "type": "vowel",
+      "note": "Hungarian 'a' is rounded /ɒ/, unlike most languages where 'a' is unrounded"
+    },
+    "aː": {
+      "ipa": "aː",
+      "hungarian_letter": "á",
+      "description": "low central/front unrounded vowel (Hungarian long 'á')",
+      "sound_groups": ["unrounded_vowel", "front_vowel", "low_vowel", "low_front_vowel", "low_front_unrounded_vowel"],
+      "type": "vowel",
+      "note": "Hungarian 'á' is unrounded /aː/, open and front-ish"
+    },
+    "ɛ": {
+      "ipa": "ɛ",
+      "hungarian_letter": "e",
+      "description": "open-mid front unrounded vowel (Hungarian short 'e')",
+      "sound_groups": ["unrounded_vowel", "front_vowel", "low_front_vowel", "low_front_unrounded_vowel"],
+      "type": "vowel",
+      "note": "Hungarian 'e' /ɛ/ is open-mid, classified as low-front in the Erben system"
+    },
+    "eː": {
+      "ipa": "eː",
+      "hungarian_letter": "é",
+      "description": "close-mid front unrounded vowel (Hungarian long 'é')",
+      "sound_groups": ["unrounded_vowel", "front_vowel", "high_front_unrounded_vowel"],
+      "type": "vowel",
+      "note": "Hungarian 'é' /eː/ is close-mid, classified as high-front unrounded"
+    },
+    "i": {
+      "ipa": "i",
+      "hungarian_letter": "i",
+      "description": "close front unrounded vowel (Hungarian short 'i')",
+      "sound_groups": ["unrounded_vowel", "front_vowel", "high_front_vowel", "high_front_unrounded_vowel"],
+      "type": "vowel"
+    },
+    "iː": {
+      "ipa": "iː",
+      "hungarian_letter": "í",
+      "description": "close front unrounded vowel long (Hungarian long 'í')",
+      "sound_groups": ["unrounded_vowel", "front_vowel", "high_front_vowel", "high_front_unrounded_vowel"],
+      "type": "vowel"
+    },
+    "o": {
+      "ipa": "o",
+      "hungarian_letter": "o",
+      "description": "close-mid back rounded vowel (Hungarian short 'o')",
+      "sound_groups": ["rounded_vowel", "back_vowel"],
+      "type": "vowel"
+    },
+    "oː": {
+      "ipa": "oː",
+      "hungarian_letter": "ó",
+      "description": "close-mid back rounded vowel long (Hungarian long 'ó')",
+      "sound_groups": ["rounded_vowel", "back_vowel"],
+      "type": "vowel"
+    },
+    "ø": {
+      "ipa": "ø",
+      "hungarian_letter": "ö",
+      "description": "close-mid front rounded vowel (Hungarian short 'ö')",
+      "sound_groups": ["rounded_vowel", "front_vowel"],
+      "type": "vowel",
+      "note": "Front rounded: activates both ROUNDNESS (via rounded) but NOT back_vowel associations"
+    },
+    "øː": {
+      "ipa": "øː",
+      "hungarian_letter": "ő",
+      "description": "close-mid front rounded vowel long (Hungarian long 'ő')",
+      "sound_groups": ["rounded_vowel", "front_vowel"],
+      "type": "vowel"
+    },
+    "u": {
+      "ipa": "u",
+      "hungarian_letter": "u",
+      "description": "close back rounded vowel (Hungarian short 'u')",
+      "sound_groups": ["rounded_vowel", "back_vowel", "high_back_vowel", "high_back_rounded_vowel"],
+      "type": "vowel"
+    },
+    "uː": {
+      "ipa": "uː",
+      "hungarian_letter": "ú",
+      "description": "close back rounded vowel long (Hungarian long 'ú')",
+      "sound_groups": ["rounded_vowel", "back_vowel", "high_back_vowel", "high_back_rounded_vowel"],
+      "type": "vowel"
+    },
+    "y": {
+      "ipa": "y",
+      "hungarian_letter": "ü",
+      "description": "close front rounded vowel (Hungarian short 'ü')",
+      "sound_groups": ["rounded_vowel", "front_vowel", "high_front_vowel", "high_front_rounded_vowel"],
+      "type": "vowel"
+    },
+    "yː": {
+      "ipa": "yː",
+      "hungarian_letter": "ű",
+      "description": "close front rounded vowel long (Hungarian long 'ű')",
+      "sound_groups": ["rounded_vowel", "front_vowel", "high_front_vowel", "high_front_rounded_vowel"],
+      "type": "vowel"
+    }
+  }
+}

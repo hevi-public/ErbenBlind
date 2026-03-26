@@ -1,0 +1,81 @@
+{
+  "_note": "Rules for classifying activation strength. A phoneme can activate a macro-concept through three tiers. This prevents the 'everything activates everything' problem caused by broad sound groups.",
+  
+  "tiers": {
+    "strong": {
+      "rule": "The phoneme is one of the macro-concept's primary_cardinal_sounds",
+      "notation": "***",
+      "description": "This phoneme statistically drove the association in the original cross-linguistic data"
+    },
+    "medium": {
+      "rule": "The phoneme matches a SPECIFIC sound group (one with a place+voicing qualifier, e.g., alveolar_voiced, nasal_voiced, labial_voiceless) but is NOT a primary cardinal sound",
+      "notation": "**",
+      "description": "The phoneme shares specific articulatory features with the primary drivers"
+    },
+    "weak": {
+      "rule": "The phoneme matches only a BROAD sound group (voiced, voiceless, rounded_vowel, unrounded_vowel, front_vowel, back_vowel, low_vowel, stop, nasal, labial)",
+      "notation": "*",
+      "description": "The phoneme shares only general features — this match is likely noise"
+    }
+  },
+
+  "broad_sound_groups": [
+    "voiced",
+    "voiceless", 
+    "labial",
+    "alveolar",
+    "palatal",
+    "velar",
+    "stop",
+    "nasal",
+    "fricative",
+    "rounded_vowel",
+    "unrounded_vowel",
+    "front_vowel",
+    "back_vowel",
+    "low_vowel",
+    "high_front_vowel"
+  ],
+
+  "specific_sound_groups": [
+    "alveolar_voiced",
+    "alveolar_voiceless",
+    "labial_voiced",
+    "labial_voiceless",
+    "palatal_voiced",
+    "palatal_voiceless",
+    "velar_voiced",
+    "velar_voiceless",
+    "nasal_voiced",
+    "voiceless_stop",
+    "voiced_stop",
+    "low_front_vowel",
+    "low_front_unrounded_vowel",
+    "low_back_rounded_vowel",
+    "high_front_rounded_vowel",
+    "high_front_unrounded_vowel",
+    "high_back_rounded_vowel"
+  ],
+
+  "_classification_algorithm": "For each (phoneme, macro-concept) pair where there IS an overlap between sound_groups: 1) Check if phoneme is in macro-concept's primary_cardinal_sounds → STRONG. 2) Else check if the overlap includes any specific_sound_group → MEDIUM. 3) Else (overlap is only broad groups) → WEAK.",
+
+  "_primary_cardinal_mapping_note": "The primary_cardinal_sounds in erben_table.json use simplified phoneme labels (e.g., 'k', 'o'). These need to be matched against IPA phoneme IDs. For Hungarian: 'a' in primary_cardinal_sounds means /a/ (the open vowel, corresponding to Hungarian á /aː/), NOT Hungarian a /ɒ/. 'o' means /o/ (matches Hungarian o and ó). 'u' means /u/ (matches Hungarian u and ú). 'i' means /i/ (matches Hungarian i and í). 'r' means /r/, 'l' means /l/, etc.",
+
+  "_cardinal_to_ipa_map": {
+    "p": ["p"],
+    "b": ["b"],
+    "t": ["t"],
+    "d": ["d"],
+    "k": ["k"],
+    "s": ["s"],
+    "n": ["n", "ɲ"],
+    "m": ["m"],
+    "l": ["l"],
+    "r": ["r"],
+    "a": ["aː", "ɛ"],
+    "i": ["i", "iː"],
+    "o": ["o", "oː"],
+    "u": ["u", "uː"],
+    "_note": "Cardinal 'a' maps to Hungarian á /aː/ and e /ɛ/ (both low-front unrounded). Cardinal 'n' includes ɲ (palatal nasal, still nasal_voiced). Lengths don't affect classification."
+  }
+}
