@@ -24,38 +24,87 @@ from pipeline.prompt_formatter import (
     format_step3_prompt,
     get_system_prompt,
 )
+from pipeline.config_loader import load_config
 from pipeline.option_selector import select_options
 from pipeline.random_profile_generator import generate_random_profile
 from pipeline.result_recorder import save_profile, save_step, save_metadata
 
 
-# Dummy responses for --dry-run mode
-DRY_RUN_STEP1 = (
-    "Looking at the consonant frame, Position 1 shows strong activation in MC-10 "
-    "and MC-05, while Position 3 has strong MC-03, MC-17, and MC-11. The overlap "
-    "of MC-05 across both positions suggests a pattern of roughness or disruption. "
-    "My choice is A."
-)
+def _generate_dry_run_response(
+    step: int,
+    profile: ActivationProfile,
+    options: Optional[List[Dict[str, Any]]] = None,
+    rng: Optional[random.Random] = None,
+) -> str:
+    """Generate a profile-aware dummy response for dry-run mode.
 
-DRY_RUN_STEP2 = (
-    "The vowel data adds strong activations in MC-06, MC-12, and MC-14 at Position 2. "
-    "Combined with the consonant frame, the reinforcement of MC-01 and MC-02 across "
-    "layers suggests a holistic quality rather than a specific physical process. "
-    "The vowel data confirms my earlier reading. My choice is A."
-)
+    Unlike static strings, these responses reference the actual MC codes from
+    the profile and pick from the actual forced-choice options, making dry-run
+    useful for testing the full pipeline including response parsing.
+    """
+    if rng is None:
+        rng = random.Random()
 
-DRY_RUN_STEP3 = (
-    "1. Semantic field prediction: decay/deterioration — the profile points to "
-    "something that is rough, uneven, deep, and soft in a degraded sense.\n"
-    "2. Confidence: moderate\n"
-    "3. This word likely refers to something ugly, rotten, or in a state of decline."
-)
+    letters = "ABCDEFGH"
+
+    if step == 1:
+        # Reference actual consonant layer codes
+        strong_codes = []
+        for pos in profile["consonant_layer"]:
+            for act in pos["activations"]:
+                if act["tier"] == "strong":
+                    strong_codes.append(act["macro_concept_id"])
+        codes_str = ", ".join(strong_codes[:4]) if strong_codes else "no strong codes"
+        chosen_idx = rng.randint(0, len(options) - 1) if options else 0
+        letter = letters[chosen_idx]
+        return (
+            f"The consonant frame shows strong activations at {codes_str}. "
+            f"The pattern across positions suggests a consistent theme. "
+            f"My choice is {letter}."
+        )
+
+    elif step == 2:
+        # Reference actual vowel layer codes
+        strong_codes = []
+        for pos in profile["vowel_layer"]:
+            for act in pos["activations"]:
+                if act["tier"] == "strong":
+                    strong_codes.append(act["macro_concept_id"])
+        codes_str = ", ".join(strong_codes[:4]) if strong_codes else "no strong codes"
+        reinforced = ", ".join(profile["reinforced_codes"][:3]) if profile["reinforced_codes"] else "none"
+        chosen_idx = rng.randint(0, len(options) - 1) if options else 0
+        letter = letters[chosen_idx]
+        return (
+            f"The vowel data adds {codes_str}. "
+            f"Reinforcement across layers ({reinforced}) supports the reading. "
+            f"My choice is {letter}."
+        )
+
+    else:
+        # Step 3: reference decoded concept names
+        codes = load_config("concept_codes.json")
+        code_to_label = codes["code_to_label"]
+        strong_labels = []
+        for pos in profile["consonant_layer"] + profile["vowel_layer"]:
+            for act in pos["activations"]:
+                if act["tier"] == "strong":
+                    strong_labels.append(act["macro_concept"])
+        unique_labels = list(dict.fromkeys(strong_labels))[:5]
+        labels_str = ", ".join(l.lower() for l in unique_labels) if unique_labels else "unclear"
+        return (
+            f"1. Semantic field prediction: the profile's strong activations "
+            f"({labels_str}) suggest a domain related to {unique_labels[0].lower() if unique_labels else 'unknown'}.\n"
+            f"2. Confidence: moderate\n"
+            f"3. This word likely refers to something connected to {labels_str}."
+        )
 
 
 def _call_claude(prompt: str, system_prompt: str, model: str) -> str:
     """Call the claude CLI as a subprocess with fresh context.
 
     Each invocation is independent — no conversation memory carries over.
+    A unique nonce is appended to defeat prompt-prefix caching.
+    Prompt is passed via stdin to avoid shell escaping issues.
 
     Args:
         prompt: The user-message content to send.
@@ -66,19 +115,24 @@ def _call_claude(prompt: str, system_prompt: str, model: str) -> str:
         The model's response text.
 
     Raises:
-        subprocess.CalledProcessError: If the claude CLI fails.
+        RuntimeError: If the claude CLI fails.
     """
+    # Append a unique nonce to prevent prompt-prefix caching across calls.
+    # This is invisible metadata that ensures no two prompts are byte-identical.
+    nonce = uuid.uuid4().hex
+    prompt_with_nonce = f"{prompt}\n\n[Analysis ID: {nonce}]"
+
     cmd = [
         "claude",
         "--print",
         "--model", model,
         "--system-prompt", system_prompt,
         "--no-session-persistence",
-        prompt,
     ]
 
     result = subprocess.run(
         cmd,
+        input=prompt_with_nonce,
         capture_output=True,
         text=True,
         timeout=120,
@@ -225,7 +279,7 @@ def run_single_trial(
     print("  Step 1: Consonant frame...")
     prompt1 = format_step1_prompt(profile, step1_options)
     if dry_run:
-        response1 = DRY_RUN_STEP1
+        response1 = _generate_dry_run_response(1, profile, step1_options, rng)
     else:
         response1 = _call_claude(prompt1, system_prompt, model)
     choice1 = parse_forced_choice(response1, step1_options)
@@ -235,7 +289,7 @@ def run_single_trial(
     print("  Step 2: Vowel fill...")
     prompt2 = format_step2_prompt(profile, step2_options, response1, choice1)
     if dry_run:
-        response2 = DRY_RUN_STEP2
+        response2 = _generate_dry_run_response(2, profile, step2_options, rng)
     else:
         response2 = _call_claude(prompt2, system_prompt, model)
     choice2 = parse_forced_choice(response2, step2_options)
@@ -245,7 +299,7 @@ def run_single_trial(
     print("  Step 3: Synthesis...")
     prompt3 = format_step3_prompt(profile, response1, choice1, response2, choice2)
     if dry_run:
-        response3 = DRY_RUN_STEP3
+        response3 = _generate_dry_run_response(3, profile, rng=rng)
     else:
         response3 = _call_claude(prompt3, system_prompt, model)
     print(f"    Prediction: {response3[:100]}...")

@@ -4,7 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from run_trial import parse_forced_choice, _sanitize_word_id, run_single_trial
+from run_trial import (
+    parse_forced_choice, _sanitize_word_id, _generate_dry_run_response,
+    run_single_trial,
+)
+from pipeline.phoneme_decomposer import decompose_word
+from pipeline.activation_profiler import build_activation_profile
 import pipeline.result_recorder as rr
 
 
@@ -83,8 +88,77 @@ class TestSanitizeWordId(unittest.TestCase):
         self.assertEqual(_sanitize_word_id("két szó"), "két_szó")
 
 
-class TestDryRun(unittest.TestCase):
-    """Test dry-run mode saves correct artifacts."""
+class TestDryRunResponseGenerator(unittest.TestCase):
+    """Test that dry-run responses are profile-aware and vary between words."""
+
+    def test_step1_references_actual_codes(self):
+        """Step 1 dry-run should mention actual consonant MC codes from the profile."""
+        import random
+        profile = build_activation_profile(decompose_word("rút"))
+        response = _generate_dry_run_response(1, profile, SAMPLE_OPTIONS, random.Random(42))
+        # Should reference some actual MC codes from the consonant layer
+        consonant_codes = set()
+        for pos in profile["consonant_layer"]:
+            for act in pos["activations"]:
+                if act["tier"] == "strong":
+                    consonant_codes.add(act["macro_concept_id"])
+        found = any(code in response for code in consonant_codes)
+        self.assertTrue(found, f"Response should reference consonant codes. Got: {response}")
+
+    def test_step2_references_reinforcement(self):
+        """Step 2 dry-run should mention reinforced codes."""
+        import random
+        profile = build_activation_profile(decompose_word("rút"))
+        response = _generate_dry_run_response(2, profile, SAMPLE_OPTIONS, random.Random(42))
+        # Should contain reinforcement info
+        self.assertIn("Reinforcement", response)
+
+    def test_step3_references_concept_names(self):
+        """Step 3 dry-run should mention decoded concept names, not MC codes."""
+        import random
+        profile = build_activation_profile(decompose_word("rút"))
+        response = _generate_dry_run_response(3, profile, rng=random.Random(42))
+        # Should have human-readable names
+        found_name = any(
+            name.lower() in response.lower()
+            for name in ["turn", "uneven", "roundness", "deep", "smallness"]
+        )
+        self.assertTrue(found_name, f"Step 3 should reference concept names. Got: {response}")
+
+    def test_different_words_produce_different_responses(self):
+        """Different words should produce different dry-run responses."""
+        import random
+        profile_rut = build_activation_profile(decompose_word("rút"))
+        profile_viz = build_activation_profile(decompose_word("víz"))
+        resp_rut = _generate_dry_run_response(1, profile_rut, SAMPLE_OPTIONS, random.Random(42))
+        resp_viz = _generate_dry_run_response(1, profile_viz, SAMPLE_OPTIONS, random.Random(42))
+        self.assertNotEqual(resp_rut, resp_viz,
+            "Different words should produce different dry-run responses")
+
+    def test_choice_is_parseable(self):
+        """Dry-run responses should be parseable by parse_forced_choice."""
+        import random
+        profile = build_activation_profile(decompose_word("rút"))
+        response = _generate_dry_run_response(1, profile, SAMPLE_OPTIONS, random.Random(42))
+        choice = parse_forced_choice(response, SAMPLE_OPTIONS)
+        self.assertNotEqual(choice, "UNPARSED",
+            f"Dry-run response should be parseable. Got: {response}")
+
+    def test_does_not_always_pick_a(self):
+        """Over multiple seeds, dry-run should pick different options."""
+        import random
+        profile = build_activation_profile(decompose_word("rút"))
+        choices = set()
+        for seed in range(20):
+            resp = _generate_dry_run_response(1, profile, SAMPLE_OPTIONS, random.Random(seed))
+            choice = parse_forced_choice(resp, SAMPLE_OPTIONS)
+            choices.add(choice)
+        self.assertGreater(len(choices), 1,
+            "Dry-run should pick different options across seeds")
+
+
+class TestDryRunIntegration(unittest.TestCase):
+    """Test dry-run mode end-to-end with result saving."""
 
     def setUp(self):
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -134,9 +208,25 @@ class TestDryRun(unittest.TestCase):
         )
         ctrl_dir = rr.CONTROLS_DIR / "rút_ctrl001"
         self.assertTrue(ctrl_dir.exists())
-        # Should NOT be in results
         result_dir = rr.RESULTS_DIR / "rút_ctrl001"
         self.assertFalse(result_dir.exists())
+
+    def test_different_words_save_different_responses(self):
+        """Two different words in dry-run should produce different saved response files."""
+        run_single_trial(
+            word="rút", target_domain="SD-15",
+            trial_type="target_present",
+            run_id="cmp001", dry_run=True, seed=42,
+        )
+        run_single_trial(
+            word="víz", target_domain="SD-01",
+            trial_type="target_present",
+            run_id="cmp002", dry_run=True, seed=42,
+        )
+        resp1 = (rr.RESULTS_DIR / "rút_cmp001" / "step1_consonant_response.txt").read_text()
+        resp2 = (rr.RESULTS_DIR / "víz_cmp002" / "step1_consonant_response.txt").read_text()
+        self.assertNotEqual(resp1, resp2,
+            "Different words should have different response files in dry-run")
 
 
 if __name__ == "__main__":
