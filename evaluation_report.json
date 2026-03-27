@@ -1,0 +1,92 @@
+{
+  "summary": {
+    "total_trials": 38,
+    "result_trials": 35,
+    "control_trials": 3,
+    "chance_rate": 0.25
+  },
+  "hit_rates_by_trial_type": {
+    "target_present": {
+      "step1_hits": 16,
+      "step1_total": 29,
+      "step2_hits": 15,
+      "step2_total": 29,
+      "unparsed_count": 0,
+      "step1_rate": 0.5517241379310345,
+      "step2_rate": 0.5172413793103449
+    },
+    "target_absent": {
+      "step1_hits": 0,
+      "step1_total": 3,
+      "step2_hits": 0,
+      "step2_total": 3,
+      "unparsed_count": 0,
+      "step1_rate": 0.0,
+      "step2_rate": 0.0
+    },
+    "null_trial": {
+      "step1_hits": 0,
+      "step1_total": 3,
+      "step2_hits": 0,
+      "step2_total": 3,
+      "unparsed_count": 0,
+      "step1_rate": 0.0,
+      "step2_rate": 0.0
+    },
+    "random_profile": {
+      "step1_hits": 0,
+      "step1_total": 3,
+      "step2_hits": 0,
+      "step2_total": 3,
+      "unparsed_count": 0,
+      "step1_rate": 0.0,
+      "step2_rate": 0.0
+    }
+  },
+  "signal_strength": {
+    "target_present_rate": 0.5172413793103449,
+    "random_profile_rate": 0.0,
+    "difference": 0.5172413793103449,
+    "interpretation": "positive = real words beat random profiles"
+  },
+  "statistical_significance": {
+    "test": "one-sided binomial",
+    "hits": 15,
+    "trials": 29,
+    "chance_rate": 0.25,
+    "p_value": 0.0017842616544088419,
+    "significant_at_0_05": true,
+    "note": "Requires ~12 hits out of 29 for p<0.05"
+  },
+  "synthesis_consistency": {
+    "consistent_count": 26,
+    "total": 29,
+    "rate": 0.896551724137931
+  },
+  "per_word_breakdown": {
+    "rút": {
+      "target_domain": "SD-15",
+      "runs": 10,
+      "step1_hits": 8,
+      "step2_hits": 9,
+      "synthesis_consistent": 9,
+      "synthesis_total": 10
+    },
+    "tűz": {
+      "target_domain": "SD-03",
+      "runs": 9,
+      "step1_hits": 4,
+      "step2_hits": 4,
+      "synthesis_consistent": 7,
+      "synthesis_total": 9
+    },
+    "víz": {
+      "target_domain": "SD-01",
+      "runs": 10,
+      "step1_hits": 4,
+      "step2_hits": 2,
+      "synthesis_consistent": 10,
+      "synthesis_total": 10
+    }
+  }
+}

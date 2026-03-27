@@ -10,6 +10,7 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
 from math import comb
 from pathlib import Path
@@ -243,7 +244,7 @@ def generate_report(
     tp_trials = [t for t in all_trials if t["meta"]["trial_type"] == "target_present"]
     consistency = compute_synthesis_consistency(tp_trials)
 
-    # Per-word breakdown for target_present
+    # Per-word breakdown for target_present (including per-word synthesis consistency)
     word_breakdown: Dict[str, Dict[str, Any]] = {}
     for trial in tp_trials:
         meta = trial["meta"]
@@ -252,6 +253,7 @@ def generate_report(
             word_breakdown[word] = {
                 "target_domain": meta["target_domain"],
                 "runs": 0, "step1_hits": 0, "step2_hits": 0,
+                "synthesis_consistent": 0, "synthesis_total": 0,
             }
         wb = word_breakdown[word]
         wb["runs"] += 1
@@ -259,6 +261,21 @@ def generate_report(
             wb["step1_hits"] += 1
         if _is_hit(meta.get("step2_choice", ""), meta["target_domain"]):
             wb["step2_hits"] += 1
+
+        # Per-word synthesis consistency: does step 3 align with step 2?
+        choice2 = meta.get("step2_choice", "")
+        prediction = meta.get("step3_prediction", "")
+        if choice2 and choice2 != "UNPARSED" and prediction:
+            wb["synthesis_total"] += 1
+            domain_id = _extract_domain_id(choice2)
+            if domain_id and domain_id in prediction:
+                wb["synthesis_consistent"] += 1
+            else:
+                label_match = re.search(r'\((\w+)\)', choice2)
+                if label_match:
+                    label = label_match.group(1).lower().replace("_", " ")
+                    if label in prediction.lower() or label.split()[0] in prediction.lower():
+                        wb["synthesis_consistent"] += 1
 
     report = {
         "summary": {
@@ -366,7 +383,10 @@ def print_report(report: Dict[str, Any]) -> None:
         for word, wb in sorted(report["per_word_breakdown"].items()):
             s1 = f"{wb['step1_hits']}/{wb['runs']}"
             s2 = f"{wb['step2_hits']}/{wb['runs']}"
-            print(f"  {word:12s} (target: {wb['target_domain']}): step1={s1}, step2={s2}")
+            synth = ""
+            if wb.get("synthesis_total", 0) > 0:
+                synth = f", synth_consistency={wb['synthesis_consistent']}/{wb['synthesis_total']}"
+            print(f"  {word:12s} (target: {wb['target_domain']}): step1={s1}, step2={s2}{synth}")
 
     print("\n" + "=" * 60)
 

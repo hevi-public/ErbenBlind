@@ -13,6 +13,7 @@ import random
 import re
 import subprocess
 import sys
+import time
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -291,6 +292,7 @@ def run_single_trial(
     if dry_run:
         response2 = _generate_dry_run_response(2, profile, step2_options, rng)
     else:
+        time.sleep(5)  # Rate-limit protection between claude calls
         response2 = _call_claude(prompt2, system_prompt, model)
     choice2 = parse_forced_choice(response2, step2_options)
     print(f"    Choice: {choice2}")
@@ -301,6 +303,7 @@ def run_single_trial(
     if dry_run:
         response3 = _generate_dry_run_response(3, profile, rng=rng)
     else:
+        time.sleep(5)  # Rate-limit protection between claude calls
         response3 = _call_claude(prompt3, system_prompt, model)
     print(f"    Prediction: {response3[:100]}...")
 
