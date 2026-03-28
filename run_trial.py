@@ -11,7 +11,6 @@ Usage:
 import argparse
 import random
 import re
-import subprocess
 import sys
 import time
 import uuid
@@ -29,6 +28,7 @@ from pipeline.config_loader import load_config
 from pipeline.option_selector import select_options
 from pipeline.random_profile_generator import generate_random_profile
 from pipeline.result_recorder import save_profile, save_step, save_metadata
+from pipeline.model_runner import run_model, is_local_model
 
 
 def _generate_dry_run_response(
@@ -100,55 +100,6 @@ def _generate_dry_run_response(
         )
 
 
-def _call_claude(prompt: str, system_prompt: str, model: str) -> str:
-    """Call the claude CLI as a subprocess with fresh context.
-
-    Each invocation is independent — no conversation memory carries over.
-    A unique nonce is appended to defeat prompt-prefix caching.
-    Prompt is passed via stdin to avoid shell escaping issues.
-
-    Args:
-        prompt: The user-message content to send.
-        system_prompt: The system prompt for the session.
-        model: Model name or alias (e.g., "sonnet", "opus").
-
-    Returns:
-        The model's response text.
-
-    Raises:
-        RuntimeError: If the claude CLI fails.
-    """
-    # Append a unique nonce to prevent prompt-prefix caching across calls.
-    # This is invisible metadata that ensures no two prompts are byte-identical.
-    nonce = uuid.uuid4().hex
-    prompt_with_nonce = f"{prompt}\n\n[Analysis ID: {nonce}]"
-
-    cmd = [
-        "claude",
-        "--print",
-        "--model", model,
-        "--system-prompt", system_prompt,
-        "--no-session-persistence",
-    ]
-
-    result = subprocess.run(
-        cmd,
-        input=prompt_with_nonce,
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"claude CLI failed (exit {result.returncode}):\n"
-            f"stderr: {result.stderr}\n"
-            f"stdout: {result.stdout}"
-        )
-
-    return result.stdout.strip()
-
-
 def parse_forced_choice(
     response: str,
     options: List[Dict[str, Any]],
@@ -174,7 +125,10 @@ def parse_forced_choice(
         r'(?:my\s+)?choice\s+(?:is\s+)?([A-H])\b',
         r'I\s+choose\s+([A-H])\b',
         r'I\s+(?:would\s+)?(?:pick|select)\s+([A-H])\b',
+        r"I'?ll\s+go\s+with\s+([A-H])\b",
+        r'(?:most\s+consistent|best\s+match(?:es)?)\s+.*?\b([A-H])\b',
         r'\bchoice:\s*([A-H])\b',
+        r'\banswer\s+(?:is\s+)?([A-H])\b',
         r'\b([A-H])\)\s',  # "A) " at start of a justification
     ]
 
@@ -282,7 +236,7 @@ def run_single_trial(
     if dry_run:
         response1 = _generate_dry_run_response(1, profile, step1_options, rng)
     else:
-        response1 = _call_claude(prompt1, system_prompt, model)
+        response1 = run_model(prompt1, model, system_prompt)
     choice1 = parse_forced_choice(response1, step1_options)
     print(f"    Choice: {choice1}")
 
@@ -292,8 +246,9 @@ def run_single_trial(
     if dry_run:
         response2 = _generate_dry_run_response(2, profile, step2_options, rng)
     else:
-        time.sleep(5)  # Rate-limit protection between claude calls
-        response2 = _call_claude(prompt2, system_prompt, model)
+        if not is_local_model(model):
+            time.sleep(5)  # Rate-limit protection between claude calls
+        response2 = run_model(prompt2, model, system_prompt)
     choice2 = parse_forced_choice(response2, step2_options)
     print(f"    Choice: {choice2}")
 
@@ -303,8 +258,9 @@ def run_single_trial(
     if dry_run:
         response3 = _generate_dry_run_response(3, profile, rng=rng)
     else:
-        time.sleep(5)  # Rate-limit protection between claude calls
-        response3 = _call_claude(prompt3, system_prompt, model)
+        if not is_local_model(model):
+            time.sleep(5)  # Rate-limit protection between claude calls
+        response3 = run_model(prompt3, model, system_prompt)
     print(f"    Prediction: {response3[:100]}...")
 
     # Record everything
@@ -353,7 +309,8 @@ def main():
                         choices=["target_present", "target_absent", "null_trial", "random_profile"],
                         help="Trial type")
     parser.add_argument("--run-id", default=None, help="Run identifier (auto-generated if omitted)")
-    parser.add_argument("--model", default="sonnet", help="Claude model to use (default: sonnet)")
+    parser.add_argument("--model", default="sonnet",
+                        help="Model to use: 'sonnet', 'opus', 'claude', or 'ollama:model_name' (default: sonnet)")
     parser.add_argument("--num-options", type=int, default=4, help="Number of forced-choice options")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
     parser.add_argument("--dry-run", action="store_true",

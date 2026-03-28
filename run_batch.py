@@ -249,7 +249,8 @@ def main():
     parser.add_argument("--word-list", required=True, help="Path to TSV word list file")
     parser.add_argument("--runs-per-word", type=int, default=1, help="Number of target_present runs per word (default: 1)")
     parser.add_argument("--include-controls", action="store_true", help="Add control trials per word")
-    parser.add_argument("--model", default="sonnet", help="Claude model to use (default: sonnet)")
+    parser.add_argument("--model", default="sonnet",
+                        help="Model to use: 'sonnet', 'opus', 'claude', or 'ollama:model_name' (default: sonnet)")
     parser.add_argument("--num-options", type=int, default=4, help="Number of forced-choice options (default: 4)")
     parser.add_argument("--seed", type=int, default=None, help="Base random seed for reproducibility")
     parser.add_argument("--dry-run", action="store_true", help="Skip claude CLI calls, use dummy responses")
