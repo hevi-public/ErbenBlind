@@ -9,12 +9,18 @@ Usage:
 """
 
 import argparse
+import datetime
 import random
 import re
 import sys
 import time
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
+
+
+def _ts() -> str:
+    """Return current local time as [HH:MM:SS] for log lines."""
+    return datetime.datetime.now().strftime("[%H:%M:%S]")
 
 from pipeline.phoneme_decomposer import decompose_word
 from pipeline.activation_profiler import ActivationProfile, build_activation_profile
@@ -23,12 +29,13 @@ from pipeline.prompt_formatter import (
     format_step2_prompt,
     format_step3_prompt,
     get_system_prompt,
+    get_step3_system_prompt,
 )
 from pipeline.config_loader import load_config
 from pipeline.option_selector import select_options
 from pipeline.random_profile_generator import generate_random_profile
 from pipeline.result_recorder import save_profile, save_step, save_metadata
-from pipeline.model_runner import run_model, is_local_model
+from pipeline.model_runner import run_model, is_local_model, strip_thinking_tags
 
 
 def _generate_dry_run_response(
@@ -107,6 +114,7 @@ def parse_forced_choice(
     """Extract the chosen semantic domain from a forced-choice response.
 
     Tries multiple strategies:
+    0. Look for explicit "CHOICE: <label or letter>" line (reasoning prompt format)
     1. Look for explicit letter choice: "My choice is A", "I choose B", "Choice: C"
     2. Look for the last standalone letter A-H in the response
     3. Search for domain labels in the response text
@@ -119,6 +127,25 @@ def parse_forced_choice(
         The chosen domain as "SD-XX (LABEL)" or "UNPARSED" if extraction fails.
     """
     letters = "ABCDEFGH"
+
+    # Strategy 0: CHOICE: line (reasoning prompt format)
+    choice_line_match = re.search(r'CHOICE:\s*(.+)', response, re.IGNORECASE)
+    if choice_line_match:
+        choice_text = choice_line_match.group(1).strip()
+        # Sub-strategy: letter (e.g., "CHOICE: A")
+        letter_match = re.match(r'^([A-H])\b', choice_text, re.IGNORECASE)
+        if letter_match:
+            letter = letter_match.group(1).upper()
+            idx = letters.index(letter)
+            if idx < len(options):
+                opt = options[idx]
+                return f"{opt['id']} ({opt['label']})"
+        # Sub-strategy: label text (e.g., "CHOICE: DECAY_DETERIORATION")
+        choice_upper = choice_text.upper()
+        for opt in options:
+            label = opt.get("label", "")
+            if label and label.upper() in choice_upper:
+                return f"{opt['id']} ({opt['label']})"
 
     # Strategy 1: Explicit choice patterns
     choice_patterns = [
@@ -179,6 +206,9 @@ def run_single_trial(
     num_options: int = 4,
     seed: Optional[int] = None,
     dry_run: bool = False,
+    decode_all_steps: bool = False,
+    reasoning_prompt: bool = False,
+    timeout: int = 600,
 ) -> Dict[str, Any]:
     """Run a complete blinded trial for one word.
 
@@ -193,6 +223,11 @@ def run_single_trial(
         num_options: Number of forced-choice options per step.
         seed: Random seed for reproducibility.
         dry_run: If True, skip claude CLI calls and use dummy responses.
+        decode_all_steps: If True, use human-readable labels in steps 1-2 instead
+            of MC-XX codes.
+        reasoning_prompt: If True, use structured counting-based system prompts
+            designed for models that struggle with gestalt synthesis.
+        timeout: Seconds to wait per model call (Ollama only).
 
     Returns:
         Summary dict with choices, predictions, and file paths.
@@ -203,14 +238,13 @@ def run_single_trial(
     rng = random.Random(seed) if seed is not None else random.Random()
     word_id = _sanitize_word_id(word)
     is_control = trial_type == "random_profile"
-    system_prompt = get_system_prompt()
+    system_prompt = get_system_prompt(decode_all_steps, reasoning_prompt)
+    step3_system_prompt = get_step3_system_prompt(reasoning_prompt)
 
-    print(f"[Trial] word={word}, domain={target_domain}, type={trial_type}, run={run_id}")
+    print(f"{_ts()} [Trial] word={word}, domain={target_domain}, type={trial_type}, run={run_id}")
 
     # Step 0: Build activation profile
     if trial_type == "random_profile":
-        # For random profile trials, generate synthetic profile
-        # Use structure similar to a typical word (2 consonants, 1 vowel)
         phonemes = decompose_word(word)
         num_c = sum(1 for p in phonemes if p["type"] == "consonant")
         num_v = sum(1 for p in phonemes if p["type"] == "vowel")
@@ -219,70 +253,78 @@ def run_single_trial(
             num_vowel_positions=num_v,
             rng=rng,
         )
-        print(f"  Generated random profile ({num_c}C, {num_v}V)")
+        print(f"{_ts()}   Generated random profile ({num_c}C, {num_v}V)")
     else:
         phonemes = decompose_word(word)
         profile = build_activation_profile(phonemes)
         ipa_seq = [p["ipa"] for p in phonemes]
-        print(f"  Decomposed: {ipa_seq}")
+        print(f"{_ts()}   Decomposed: {ipa_seq}")
 
     # Select forced-choice options (same for both steps for now)
     step1_options = select_options(target_domain, trial_type, num_options, rng)
     step2_options = select_options(target_domain, trial_type, num_options, rng)
 
     # Step 1: Consonant frame
-    print("  Step 1: Consonant frame...")
-    prompt1 = format_step1_prompt(profile, step1_options)
+    print(f"{_ts()}   Step 1: Consonant frame — sending to model...")
+    t1 = time.monotonic()
+    prompt1 = format_step1_prompt(profile, step1_options, decode_all_steps=decode_all_steps)
     if dry_run:
         response1 = _generate_dry_run_response(1, profile, step1_options, rng)
+        response1_for_parse = response1
     else:
-        response1 = run_model(prompt1, model, system_prompt)
-    choice1 = parse_forced_choice(response1, step1_options)
-    print(f"    Choice: {choice1}")
+        response1 = run_model(prompt1, model, system_prompt, timeout=timeout)
+        response1_for_parse, _ = strip_thinking_tags(response1)
+    choice1 = parse_forced_choice(response1_for_parse, step1_options)
+    print(f"{_ts()}   Step 1 done ({time.monotonic()-t1:.0f}s) → {choice1}")
 
     # Step 2: Vowel fill
-    print("  Step 2: Vowel fill...")
-    prompt2 = format_step2_prompt(profile, step2_options, response1, choice1)
+    print(f"{_ts()}   Step 2: Vowel fill — sending to model...")
+    t2 = time.monotonic()
+    prompt2 = format_step2_prompt(profile, step2_options, response1_for_parse, choice1, decode_all_steps=decode_all_steps)
     if dry_run:
         response2 = _generate_dry_run_response(2, profile, step2_options, rng)
+        response2_for_parse = response2
     else:
         if not is_local_model(model):
             time.sleep(5)  # Rate-limit protection between claude calls
-        response2 = run_model(prompt2, model, system_prompt)
-    choice2 = parse_forced_choice(response2, step2_options)
-    print(f"    Choice: {choice2}")
+        response2 = run_model(prompt2, model, system_prompt, timeout=timeout)
+        response2_for_parse, _ = strip_thinking_tags(response2)
+    choice2 = parse_forced_choice(response2_for_parse, step2_options)
+    print(f"{_ts()}   Step 2 done ({time.monotonic()-t2:.0f}s) → {choice2}")
 
     # Step 3: Synthesis (open-ended, no forced choice)
-    print("  Step 3: Synthesis...")
-    prompt3 = format_step3_prompt(profile, response1, choice1, response2, choice2)
+    print(f"{_ts()}   Step 3: Synthesis — sending to model...")
+    t3 = time.monotonic()
+    prompt3 = format_step3_prompt(profile, response1_for_parse, choice1, response2_for_parse, choice2)
     if dry_run:
         response3 = _generate_dry_run_response(3, profile, rng=rng)
     else:
         if not is_local_model(model):
             time.sleep(5)  # Rate-limit protection between claude calls
-        response3 = run_model(prompt3, model, system_prompt)
-    print(f"    Prediction: {response3[:100]}...")
+        response3 = run_model(prompt3, model, step3_system_prompt, timeout=timeout)
+    print(f"{_ts()}   Step 3 done ({time.monotonic()-t3:.0f}s) — {response3[:80]}...")
 
-    # Record everything
-    print("  Saving artifacts...")
-    save_profile(word_id, run_id, profile, is_control=is_control)
-    save_step(word_id, run_id, 1, "consonant", prompt1, response1, is_control=is_control)
-    save_step(word_id, run_id, 2, "vowel", prompt2, response2, is_control=is_control)
-    save_step(word_id, run_id, 3, "synthesis", prompt3, response3, is_control=is_control)
-    save_metadata(
-        word_id, run_id,
-        word=word,
-        target_domain=target_domain,
-        trial_type=trial_type,
-        model=model,
-        forced_choice_options_step1=step1_options,
-        forced_choice_options_step2=step2_options,
-        step1_choice=choice1,
-        step2_choice=choice2,
-        step3_prediction=response3,
-        extra={"seed": seed, "dry_run": dry_run},
-        is_control=is_control,
-    )
+    # Record everything (skipped in dry-run to avoid polluting results/)
+    if not dry_run:
+        print(f"{_ts()}   Saving artifacts...")
+        save_profile(word_id, run_id, profile, is_control=is_control)
+        save_step(word_id, run_id, 1, "consonant", prompt1, response1, is_control=is_control)
+        save_step(word_id, run_id, 2, "vowel", prompt2, response2, is_control=is_control)
+        save_step(word_id, run_id, 3, "synthesis", prompt3, response3, is_control=is_control)
+        save_metadata(
+            word_id, run_id,
+            word=word,
+            target_domain=target_domain,
+            trial_type=trial_type,
+            model=model,
+            forced_choice_options_step1=step1_options,
+            forced_choice_options_step2=step2_options,
+            step1_choice=choice1,
+            step2_choice=choice2,
+            step3_prediction=response3,
+            extra={"seed": seed, "dry_run": dry_run, "decode_all_steps": decode_all_steps, "reasoning_prompt": reasoning_prompt},
+            is_control=is_control,
+        )
 
     summary = {
         "word": word,
@@ -295,7 +337,10 @@ def run_single_trial(
         "step3_prediction": response3,
     }
 
-    print(f"  Done. Saved to {'controls' if is_control else 'results'}/{word_id}_{run_id}/")
+    if dry_run:
+        print(f"{_ts()}   Done. (dry-run, no artifacts saved)")
+    else:
+        print(f"{_ts()}   Done. Saved to {'controls' if is_control else 'results'}/{word_id}_{run_id}/")
     return summary
 
 
@@ -315,6 +360,12 @@ def main():
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
     parser.add_argument("--dry-run", action="store_true",
                         help="Skip claude CLI calls, use dummy responses")
+    parser.add_argument("--decode-all-steps", action="store_true",
+                        help="Use human-readable concept labels in steps 1-2 instead of MC-XX codes")
+    parser.add_argument("--reasoning-prompt", action="store_true",
+                        help="Use structured counting-based system prompts instead of gestalt synthesis prompts")
+    parser.add_argument("--timeout", type=int, default=600,
+                        help="Seconds to wait per model call for Ollama models (default: 600)")
 
     args = parser.parse_args()
 
@@ -327,6 +378,9 @@ def main():
         num_options=args.num_options,
         seed=args.seed,
         dry_run=args.dry_run,
+        decode_all_steps=args.decode_all_steps,
+        reasoning_prompt=args.reasoning_prompt,
+        timeout=args.timeout,
     )
 
     print(f"\n=== Trial Summary ===")

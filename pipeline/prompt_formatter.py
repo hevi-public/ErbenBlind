@@ -15,8 +15,49 @@ TIER_NOTATION = {"strong": "***", "medium": "**", "weak": "*"}
 TIER_LABEL = {"strong": "strong", "medium": "medium", "weak": "weak"}
 
 
-def get_system_prompt() -> str:
-    """Return the system prompt for blinded LLM calls."""
+_REASONING_SYSTEM_PROMPT_STEPS12 = (
+    "You are a pattern matching analyst. You compare abstract feature profiles against category options.\n\n"
+    "Your method:\n"
+    "1. List each activation code from the profile\n"
+    "2. For EACH category option, count how many activation codes could relate to it\n"
+    "3. Show your counts\n"
+    "4. Pick the category with the highest count\n\n"
+    "Always show your counting work before stating your final choice. "
+    "End your response with a line that says \"CHOICE: [your pick]\" using the exact category label."
+)
+
+_REASONING_SYSTEM_PROMPT_STEP3 = (
+    "You are a semantic analyst. You have been given a set of conceptual features activated by an unknown word.\n\n"
+    "Your method:\n"
+    "1. Group the features that point in similar semantic directions\n"
+    "2. Identify the largest coherent cluster\n"
+    "3. Ask: what kind of thing or concept sits at the intersection of this cluster?\n"
+    "4. Commit to a single specific prediction\n\n"
+    "Show your grouping work, then state your prediction."
+)
+
+
+def get_system_prompt(decode_all_steps: bool = False, reasoning_prompt: bool = False) -> str:
+    """Return the system prompt for blinded LLM calls (steps 1-2).
+
+    When reasoning_prompt=True, returns a structured counting-based prompt
+    designed for models that struggle with gestalt synthesis.
+    """
+    if reasoning_prompt:
+        return _REASONING_SYSTEM_PROMPT_STEPS12
+    templates = load_config("prompt_templates.json")
+    key = "system_prompt_decoded" if decode_all_steps else "system_prompt"
+    return templates[key]
+
+
+def get_step3_system_prompt(reasoning_prompt: bool = False) -> str:
+    """Return the system prompt for Step 3 (synthesis).
+
+    Separate from steps 1-2 because the reasoning prompt uses a different
+    instruction style for the open-ended synthesis step.
+    """
+    if reasoning_prompt:
+        return _REASONING_SYSTEM_PROMPT_STEP3
     templates = load_config("prompt_templates.json")
     return templates["system_prompt"]
 
@@ -54,6 +95,52 @@ def _format_position_activations_decoded(
             for a in pos["activations"]
         )
         lines.append(f"Position {pos['position']}: {acts}")
+    return "\n".join(lines)
+
+
+def _format_position_activations_decoded_tiered(
+    positions: list[PositionActivation],
+) -> str:
+    """Format positional activations using human-readable labels with tier notation.
+
+    Used for decode_all_steps mode in Steps 1-2.
+
+    Output format:
+      Position 1: TURN***, UNEVEN***, TONGUE**, MOTHER*
+    """
+    lines: list[str] = []
+    for pos in positions:
+        acts = ", ".join(
+            f"{a['macro_concept']}{TIER_NOTATION[a['tier']]}"
+            for a in pos["activations"]
+        )
+        lines.append(f"Position {pos['position']}: {acts}")
+    return "\n".join(lines)
+
+
+def _format_combined_activations_decoded(profile: ActivationProfile) -> str:
+    """Format all positions (both layers) with decoded labels, indicating layer.
+
+    Used for decode_all_steps mode in Step 2.
+
+    Output format:
+      Position 1 [consonant]: TURN***, UNEVEN***
+      Position 2 [vowel]: ROUNDNESS***, DEEP***
+    """
+    all_positions: list[tuple[int, str, PositionActivation]] = []
+    for pos in profile["consonant_layer"]:
+        all_positions.append((pos["position"], "consonant", pos))
+    for pos in profile["vowel_layer"]:
+        all_positions.append((pos["position"], "vowel", pos))
+    all_positions.sort(key=lambda x: x[0])
+
+    lines: list[str] = []
+    for _, layer_type, pos in all_positions:
+        acts = ", ".join(
+            f"{a['macro_concept']}{TIER_NOTATION[a['tier']]}"
+            for a in pos["activations"]
+        )
+        lines.append(f"Position {pos['position']} [{layer_type}]: {acts}")
     return "\n".join(lines)
 
 
@@ -118,16 +205,18 @@ def _format_combined_activations_coded(profile: ActivationProfile) -> str:
 def format_step1_prompt(
     profile: ActivationProfile,
     forced_choice_options: list[dict[str, Any]],
+    decode_all_steps: bool = False,
 ) -> str:
     """Format the Step 1 (consonant frame) prompt for the blinded LLM.
 
-    Uses MC-XX codes only (no human-readable labels). Presents consonant
-    positions with tiered activation notation.
+    Uses MC-XX codes by default. When decode_all_steps=True, uses human-readable
+    concept labels with tier notation instead.
 
     Args:
         profile: Full activation profile from activation_profiler.
         forced_choice_options: List of semantic domain dicts with 'id', 'label',
             and optionally 'description_for_evaluation'.
+        decode_all_steps: If True, show concept names instead of MC-XX codes.
 
     Returns:
         Complete formatted prompt string.
@@ -135,7 +224,10 @@ def format_step1_prompt(
     templates = load_config("prompt_templates.json")
     template = templates["step_1_consonant_frame"]["template"]
 
-    consonant_activations = _format_position_activations_coded(profile["consonant_layer"])
+    if decode_all_steps:
+        consonant_activations = _format_position_activations_decoded_tiered(profile["consonant_layer"])
+    else:
+        consonant_activations = _format_position_activations_coded(profile["consonant_layer"])
     options_text = _format_forced_choice_options(forced_choice_options)
 
     return template.format(
@@ -149,16 +241,19 @@ def format_step2_prompt(
     forced_choice_options: list[dict[str, Any]],
     step1_response: str,
     step1_choice: str,
+    decode_all_steps: bool = False,
 ) -> str:
     """Format the Step 2 (vowel fill) prompt.
 
-    Includes quoted Step 1 response as prior commitment. Uses MC-XX codes.
+    Includes quoted Step 1 response as prior commitment. Uses MC-XX codes by
+    default; when decode_all_steps=True, shows human-readable concept labels.
 
     Args:
         profile: Full activation profile.
         forced_choice_options: Semantic domain options for this step.
         step1_response: The full text response from Step 1.
         step1_choice: The semantic domain chosen in Step 1 (e.g., "SD-15").
+        decode_all_steps: If True, show concept names instead of MC-XX codes.
 
     Returns:
         Complete formatted prompt string.
@@ -166,9 +261,18 @@ def format_step2_prompt(
     templates = load_config("prompt_templates.json")
     template = templates["step_2_vowel_fill"]["template"]
 
-    vowel_activations = _format_position_activations_coded(profile["vowel_layer"])
-    combined_activations = _format_combined_activations_coded(profile)
-    reinforced = ", ".join(profile["reinforced_codes"]) if profile["reinforced_codes"] else "None"
+    if decode_all_steps:
+        codes = load_config("concept_codes.json")
+        code_to_label = codes["code_to_label"]
+        vowel_activations = _format_position_activations_decoded_tiered(profile["vowel_layer"])
+        combined_activations = _format_combined_activations_decoded(profile)
+        reinforced = ", ".join(
+            code_to_label.get(c, c) for c in profile["reinforced_codes"]
+        ) if profile["reinforced_codes"] else "None"
+    else:
+        vowel_activations = _format_position_activations_coded(profile["vowel_layer"])
+        combined_activations = _format_combined_activations_coded(profile)
+        reinforced = ", ".join(profile["reinforced_codes"]) if profile["reinforced_codes"] else "None"
     options_text = _format_forced_choice_options(forced_choice_options)
 
     return template.format(

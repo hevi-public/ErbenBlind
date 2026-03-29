@@ -223,7 +223,26 @@ The LLM is a meaning-making machine — it will find "coherent" interpretations 
 
 # Batch with controls
 ./run_batch.sh --word-list words.txt --runs-per-word 5 --include-controls
+
+# Resume a partially completed batch (skips trials with existing results/)
+./run_batch.sh --word-list words.txt --runs-per-word 5 --include-controls --skip-completed
+
+# Local Ollama model (sequential to avoid GPU contention, longer timeout for reasoning models)
+./run_batch.sh --word-list words.txt --runs-per-word 10 --include-controls \
+  --model "ollama:deepseek-r1:14b" --reasoning-prompt --skip-completed --parallel 1 --timeout 600
 ```
+
+### Batch runner flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--model` | `sonnet` | `sonnet`, `opus`, or `ollama:MODEL_NAME` |
+| `--reasoning-prompt` | off | Structured counting-based system prompts for weaker models |
+| `--decode-all-steps` | off | Human-readable concept labels in steps 1-2 (instead of hex tokens) |
+| `--skip-completed` | off | Skip trials that already have results on disk (resume support) |
+| `--parallel` | 4 | Max concurrent trials; use 1 for local Ollama models |
+| `--timeout` | 600 | Seconds per model call (Ollama only; Claude CLI uses 120s) |
+| `--dry-run` | off | Run full pipeline logic without calling the model; does NOT write results to disk |
 
 The `--target-domain` is the human-assigned correct semantic domain for the word. This requires a pre-annotated word list where each word has been manually tagged with its best-matching domain from semantic_domains.json.
 
@@ -307,13 +326,38 @@ our manual readings almost exactly.
 The prompt templates should present tiers separately or use a notation like:
 `Position 1: MC-10***, MC-05***, MC-08**, MC-16*, MC-19*, MC-20*`
 
+## Model Support
+
+The pipeline supports multiple backends via `--model`:
+
+| Model spec | Backend | Notes |
+|---|---|---|
+| `sonnet`, `opus`, `claude` | Claude CLI (`claude --print`) | Requires Claude Code CLI installed |
+| `ollama:MODEL_NAME` | Ollama HTTP API (`localhost:11434`) | Local inference; use `--parallel 1` |
+
+### DeepSeek-R1 via Ollama
+
+DeepSeek-R1 outputs `<think>...</think>` reasoning blocks before its final answer. The pipeline automatically strips these before parsing choices, but saves the full response (including thinking) to disk for auditing. Use `--timeout 600` and `--parallel 1`.
+
+### Experimental results (rút/víz/tűz, 10 runs each, reasoning-prompt, hex tokens)
+
+| Configuration | Hit rate (step 2) | p-value | Controls |
+|---|---|---|---|
+| Claude sonnet (hex tokens) | 50% (15/30) | 0.003 | 0% |
+| DeepSeek-R1 14B via Ollama (hex tokens) | 50% (15/30) | 0.003 | 0% |
+| Qwen 2.5 14B via Ollama (hex tokens) | 23% (7/30) | 0.65 | 0% |
+| Qwen 2.5 14B via Ollama (decoded labels) | 14% (4/29) | 0.95 | 0% |
+| Qwen 2.5 14B via Ollama (reasoning prompt) | 29% (9/31) | 0.37 | 0% |
+
+Key finding: DeepSeek-R1 14B (local) matches Claude at 50%, both well above 25% chance.
+Step 1→2 correction rate for R1: 11 corrections, 0 regressions — the vowel layer is doing real work.
+
 ## Known Gaps / TODO
 
 - [ ] Add gy /ɟ/ and ty /c/ to phoneme_features.json (voiced/voiceless palatal stops)
 - [ ] Semantic adjacency matrix for option_selector.py
 - [ ] Word list with manual target_domain annotations
 - [ ] Order-effect testing: run each word consonant-first AND vowel-first
-- [ ] Multi-model support: flag to specify which model the `claude` CLI uses
 - [ ] Specificity scoring rubric for evaluate.py
 - [ ] **Refinement**: `t` classifies as WEAK for HARDNESS because `k` is the primary cardinal, even though `t` is also a voiceless stop. Consider adding `"voiceless_stop"` to HARDNESS's sound_groups so `t` gets MEDIUM. Same pattern may apply to other macro-concepts where the paper tested [–voice] + [stop] as separate groups but clearly meant voiceless stops. Review all entries for this.
 - [ ] **Refinement**: INFANCY and FATHER activate strongly for common phonemes (u→INFANCY, t→FATHER) because these are circumstantial mappings driven by baby sounds and kinship. Consider whether circumstantial mappings should be weighted differently for non-kinship words, or whether this is fine as-is (the blinded LLM should learn to ignore kinship signals when the rest of the profile doesn't support it).

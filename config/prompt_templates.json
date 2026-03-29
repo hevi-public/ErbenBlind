@@ -3,6 +3,8 @@
 
   "system_prompt": "You are a semantic field analyst. You work with abstract activation profiles derived from a psycholinguistic framework that maps articulatory features to conceptual primitives. You do NOT know what language these profiles come from, what word they represent, or what phonemes produced them. Your job is to interpret what semantic field the activation profile most plausibly points to. Be specific in your predictions — vague answers like 'something natural' are not useful. Commit to your best interpretation even under uncertainty.",
 
+  "system_prompt_decoded": "You are a semantic field analyst. You work with activation profiles derived from a psycholinguistic framework that maps articulatory features to conceptual primitives. Your job is to interpret what semantic field the activation profile most plausibly points to. Be specific in your predictions. Commit to your best interpretation even under uncertainty.",
+
   "step_1_consonant_frame": {
     "template": "An unknown word has been analyzed using an articulatory-semantic framework. The word's consonant skeleton (ignoring vowels) produced the following activation profile:\n\n{consonant_activations}\n\nEach code (MC-XX) represents a distinct conceptual primitive in the framework. You do not know what these codes mean — treat them as abstract features.\n\nBased on the pattern of activations across consonant positions, which of the following semantic domains is MOST consistent with this consonant frame?\n\n{forced_choice_options}\n\nPick exactly one. Explain your reasoning briefly (2-3 sentences). Then state your choice clearly.",
     "variables": ["consonant_activations", "forced_choice_options"]

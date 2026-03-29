@@ -8,14 +8,15 @@ Each call gets a unique nonce appended to defeat prompt-prefix caching.
 """
 
 import json
+import re
 import subprocess
 import urllib.request
 import urllib.error
 import uuid
-from typing import Optional
+from typing import Optional, Tuple
 
 
-def run_model(prompt: str, model_spec: str, system_prompt: str = "") -> str:
+def run_model(prompt: str, model_spec: str, system_prompt: str = "", timeout: int = 600) -> str:
     """Send a prompt to a model and return the response text.
 
     Each invocation is independent — no conversation memory carries over.
@@ -27,6 +28,7 @@ def run_model(prompt: str, model_spec: str, system_prompt: str = "") -> str:
             - "claude", "sonnet", "opus" → uses claude CLI
             - "ollama:model_name" → uses Ollama HTTP API
         system_prompt: System prompt for the session.
+        timeout: Seconds to wait for a response (Ollama only; Claude CLI uses 120s).
 
     Returns:
         The model's response text (stripped).
@@ -39,7 +41,7 @@ def run_model(prompt: str, model_spec: str, system_prompt: str = "") -> str:
 
     if model_spec.startswith("ollama:"):
         model_name = model_spec.split(":", 1)[1]
-        return _call_ollama(prompt_with_nonce, model_name, system_prompt)
+        return _call_ollama(prompt_with_nonce, model_name, system_prompt, timeout=timeout)
     else:
         return _call_claude(prompt_with_nonce, system_prompt, model_spec)
 
@@ -47,6 +49,25 @@ def run_model(prompt: str, model_spec: str, system_prompt: str = "") -> str:
 def is_local_model(model_spec: str) -> bool:
     """Check whether a model spec refers to a local model (no rate limits)."""
     return model_spec.startswith("ollama:")
+
+
+def strip_thinking_tags(response_text: str) -> Tuple[str, str]:
+    """Remove <think>...</think> blocks from DeepSeek-R1 responses.
+
+    The thinking content is returned separately so it can be logged for
+    auditing, while the final answer text is parsed for choices.
+
+    Args:
+        response_text: Full model response, possibly containing <think> blocks.
+
+    Returns:
+        Tuple of (cleaned_response, thinking_content).
+        thinking_content is empty string if no <think> block was present.
+    """
+    think_match = re.search(r'<think>(.*?)</think>', response_text, flags=re.DOTALL)
+    thinking_content = think_match.group(1).strip() if think_match else ""
+    cleaned = re.sub(r'<think>.*?</think>', '', response_text, flags=re.DOTALL).strip()
+    return cleaned, thinking_content
 
 
 def _call_claude(prompt: str, system_prompt: str, model: str) -> str:
@@ -89,7 +110,7 @@ def _call_claude(prompt: str, system_prompt: str, model: str) -> str:
     return result.stdout.strip()
 
 
-def _call_ollama(prompt: str, model_name: str, system_prompt: str = "") -> str:
+def _call_ollama(prompt: str, model_name: str, system_prompt: str = "", timeout: int = 600) -> str:
     """Call Ollama's chat completion API.
 
     Uses /api/chat for proper message role support.
@@ -99,6 +120,7 @@ def _call_ollama(prompt: str, model_name: str, system_prompt: str = "") -> str:
         prompt: The user-message content (already has nonce appended).
         model_name: Ollama model name (e.g., "qwen2.5:14b").
         system_prompt: Optional system prompt.
+        timeout: Seconds to wait for a response.
 
     Returns:
         The model's response text.
@@ -117,7 +139,7 @@ def _call_ollama(prompt: str, model_name: str, system_prompt: str = "") -> str:
         "stream": False,
         "options": {
             "temperature": 0.7,
-            "num_predict": 1024,
+            "num_predict": 4096,
         },
     }).encode("utf-8")
 
@@ -128,12 +150,12 @@ def _call_ollama(prompt: str, model_name: str, system_prompt: str = "") -> str:
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=120) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
             result = json.loads(response.read().decode("utf-8"))
             return result["message"]["content"].strip()
     except urllib.error.URLError as e:
         raise RuntimeError(f"Ollama API call failed: {e}") from e
     except TimeoutError:
         raise RuntimeError(
-            f"Ollama API call timed out after 120s (model: {model_name})"
+            f"Ollama API call timed out after {timeout}s (model: {model_name})"
         )

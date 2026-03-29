@@ -16,12 +16,13 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from run_trial import run_single_trial
+from run_trial import run_single_trial, _sanitize_word_id
+from pipeline.result_recorder import trial_exists
 
 
 # Trial descriptor: all info needed to run one trial independently
-TrialSpec = Tuple[str, str, str, str, str, int, Optional[int], bool]
-# (word, target_domain, trial_type, run_id, model, num_options, seed, dry_run)
+TrialSpec = Tuple[str, str, str, str, str, int, Optional[int], bool, bool, bool, int]
+# (word, target_domain, trial_type, run_id, model, num_options, seed, dry_run, decode_all_steps, reasoning_prompt, timeout)
 
 
 def parse_word_list(word_list_path: str) -> List[Dict[str, str]]:
@@ -63,6 +64,9 @@ def build_trial_specs(
     num_options: int,
     seed: Optional[int],
     dry_run: bool,
+    decode_all_steps: bool = False,
+    reasoning_prompt: bool = False,
+    timeout: int = 600,
 ) -> List[TrialSpec]:
     """Build the full list of trial specs from word entries and parameters.
 
@@ -76,6 +80,8 @@ def build_trial_specs(
         num_options: Number of forced-choice options.
         seed: Base random seed (each trial gets seed + counter). None for no seeding.
         dry_run: Whether to skip actual claude CLI calls.
+        decode_all_steps: Whether to use human-readable labels in steps 1-2.
+        reasoning_prompt: Whether to use structured counting-based system prompts.
 
     Returns:
         List of TrialSpec tuples.
@@ -91,7 +97,7 @@ def build_trial_specs(
         for run in range(runs_per_word):
             run_id = f"{counter:03d}"
             trial_seed = (seed + counter) if seed is not None else None
-            specs.append((word, domain, "target_present", run_id, model, num_options, trial_seed, dry_run))
+            specs.append((word, domain, "target_present", run_id, model, num_options, trial_seed, dry_run, decode_all_steps, reasoning_prompt, timeout))
             counter += 1
 
         # Control runs (1 each)
@@ -99,7 +105,7 @@ def build_trial_specs(
             for trial_type in ("target_absent", "null_trial", "random_profile"):
                 run_id = f"{counter:03d}"
                 trial_seed = (seed + counter) if seed is not None else None
-                specs.append((word, domain, trial_type, run_id, model, num_options, trial_seed, dry_run))
+                specs.append((word, domain, trial_type, run_id, model, num_options, trial_seed, dry_run, decode_all_steps, reasoning_prompt, timeout))
                 counter += 1
 
     return specs
@@ -112,12 +118,12 @@ def _run_trial_from_spec(spec: TrialSpec) -> Dict[str, Any]:
     It must be a top-level function (not a lambda/closure) for pickling.
 
     Args:
-        spec: Tuple of (word, target_domain, trial_type, run_id, model, num_options, seed, dry_run).
+        spec: Tuple of (word, target_domain, trial_type, run_id, model, num_options, seed, dry_run, decode_all_steps, reasoning_prompt).
 
     Returns:
         Trial summary dict with an added 'error' key (None on success, str on failure).
     """
-    word, target_domain, trial_type, run_id, model, num_options, seed, dry_run = spec
+    word, target_domain, trial_type, run_id, model, num_options, seed, dry_run, decode_all_steps, reasoning_prompt, timeout = spec
     try:
         summary = run_single_trial(
             word=word,
@@ -128,6 +134,9 @@ def _run_trial_from_spec(spec: TrialSpec) -> Dict[str, Any]:
             num_options=num_options,
             seed=seed,
             dry_run=dry_run,
+            decode_all_steps=decode_all_steps,
+            reasoning_prompt=reasoning_prompt,
+            timeout=timeout,
         )
         summary["error"] = None
         return summary
@@ -150,6 +159,10 @@ def run_batch(
     seed: Optional[int] = None,
     dry_run: bool = False,
     max_workers: int = 4,
+    decode_all_steps: bool = False,
+    reasoning_prompt: bool = False,
+    skip_completed: bool = False,
+    timeout: int = 600,
 ) -> List[Dict[str, Any]]:
     """Run a batch of blinded trials in parallel.
 
@@ -165,6 +178,8 @@ def run_batch(
         seed: Base random seed.
         dry_run: Skip claude CLI calls.
         max_workers: Maximum concurrent trial processes.
+        reasoning_prompt: Use structured counting-based system prompts.
+        skip_completed: If True, skip trials that already have results on disk.
 
     Returns:
         List of trial summary dicts (one per trial).
@@ -174,7 +189,22 @@ def run_batch(
         print("Error: No words found in word list.", file=sys.stderr)
         sys.exit(1)
 
-    specs = build_trial_specs(entries, runs_per_word, include_controls, model, num_options, seed, dry_run)
+    specs = build_trial_specs(entries, runs_per_word, include_controls, model, num_options, seed, dry_run, decode_all_steps, reasoning_prompt, timeout)
+
+    if skip_completed:
+        pending = []
+        skipped = 0
+        for spec in specs:
+            word, _, trial_type, run_id, *_ = spec
+            is_control = trial_type == "random_profile"
+            if trial_exists(_sanitize_word_id(word), run_id, is_control):
+                skipped += 1
+            else:
+                pending.append(spec)
+        if skipped:
+            print(f"Skipping {skipped} already-completed trial(s), {len(pending)} remaining.")
+        specs = pending
+
     total = len(specs)
 
     print("=" * 44)
@@ -185,6 +215,8 @@ def run_batch(
     print(f"Runs per word:  {runs_per_word}")
     print(f"Controls:       {include_controls}")
     print(f"Model:          {model}")
+    print(f"Decode labels:  {decode_all_steps}")
+    print(f"Reasoning:      {reasoning_prompt}")
     print(f"Total trials:   {total}")
     print(f"Max workers:    {max_workers}")
     print("=" * 44)
@@ -227,6 +259,13 @@ def run_batch(
                     choice_info = f" → {summary['step1_choice']}"
                 print(f"  OK [{completed + failed}/{total}] {word} ({trial_type}, {run_id}){choice_info}")
 
+            done = completed + failed
+            elapsed = time.monotonic() - start_time
+            avg_s = elapsed / done
+            remaining = total - done
+            eta_s = avg_s * remaining
+            print(f"  Progress: {done}/{total} done | {elapsed/60:.1f}m elapsed | ~{eta_s/60:.1f}m remaining", flush=True)
+
     elapsed = time.monotonic() - start_time
 
     print()
@@ -255,6 +294,14 @@ def main():
     parser.add_argument("--seed", type=int, default=None, help="Base random seed for reproducibility")
     parser.add_argument("--dry-run", action="store_true", help="Skip claude CLI calls, use dummy responses")
     parser.add_argument("--parallel", type=int, default=4, help="Maximum concurrent trials (default: 4)")
+    parser.add_argument("--decode-all-steps", action="store_true",
+                        help="Use human-readable concept labels in steps 1-2 instead of MC-XX codes")
+    parser.add_argument("--reasoning-prompt", action="store_true",
+                        help="Use structured counting-based system prompts instead of gestalt synthesis prompts")
+    parser.add_argument("--skip-completed", action="store_true",
+                        help="Skip trials that already have results on disk (for resuming a partial batch)")
+    parser.add_argument("--timeout", type=int, default=600,
+                        help="Seconds to wait per model call for Ollama models (default: 600)")
 
     args = parser.parse_args()
 
@@ -267,6 +314,10 @@ def main():
         seed=args.seed,
         dry_run=args.dry_run,
         max_workers=args.parallel,
+        decode_all_steps=args.decode_all_steps,
+        reasoning_prompt=args.reasoning_prompt,
+        skip_completed=args.skip_completed,
+        timeout=args.timeout,
     )
 
     # Exit with error if any trials failed

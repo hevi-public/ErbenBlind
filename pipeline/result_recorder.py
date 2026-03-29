@@ -172,6 +172,16 @@ def list_trials(is_control: bool = False) -> List[str]:
     )
 
 
+def trial_exists(word_id: str, run_id: str, is_control: bool = False) -> bool:
+    """Return True if a trial's results are already on disk.
+
+    A trial is considered complete when its meta.json exists. This is the
+    last file written by save_metadata(), so its presence means the full
+    pipeline ran successfully for that trial.
+    """
+    return (_trial_dir(word_id, run_id, is_control) / "meta.json").exists()
+
+
 def load_trial(word_id: str, run_id: str, is_control: bool = False) -> Dict[str, Any]:
     """Load all artifacts from a trial directory.
 
